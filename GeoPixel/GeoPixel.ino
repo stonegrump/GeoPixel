@@ -195,7 +195,8 @@ Mike is responsible
 float calcDistance(float flat1, float flon1, float flat2, float flon2)
 {
 	float distance = 0.0;
-
+  int radius = 6371;
+  
 	// add code here 
 	float lat1 = flat1 * (3.14 / 180);
 	float lat2 = flat2 * (3.14 / 180);
@@ -203,10 +204,13 @@ float calcDistance(float flat1, float flon1, float flat2, float flon2)
 	float latting = (lat2 - lat1) * (3.14 / 180);
 	float longing = (flon2 - flon1) * (3.14 / 180);
 
-	float a = Math.sin(latting / 2) * Math.sin(latting / 2) +
-		Math.cos(lat1) * Math.cos(lat2) *
-		Math.sin(longing / 2) * Math.sin(longing / 2);
+	float a = sin(latting / 2) * Math.sin(latting / 2) +
+		cos(lat1) * cos(lat2) *
+		sin(longing / 2) * sin(longing / 2);
 
+  float c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+
+  distance = radius * c;
 	return(distance);
 }
 
