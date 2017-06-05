@@ -6,10 +6,10 @@ This is skeleton code provided as a project development guideline only.  You
 are not required to follow this coding structure.  You are free to implement
 your project however you wish.
 
-Team Number:
+Team Name:
+Never Get Lost
 
 Team Members:
-
 1.
 2.
 3.
@@ -163,12 +163,14 @@ ccor = string char pointer containing the GPRMC latitude or longitude DDDMM.MMMM
 Return:
 Decimal degrees coordinate.
 
+Mike is responsible
 **************************************************/
 float degMin2DecDeg(char *cind, char *ccor)
 {
 	float degrees = 0.0;
 
 	// add code here
+
 
 	return(degrees);
 }
@@ -187,12 +189,23 @@ flat2, flon2 = second latitude and longitude coordinate in decimal degrees
 
 Return:
 distance in feet (3959 earth radius in miles * 5280 feet per mile)
+
+Mike is responsible
 **************************************************/
 float calcDistance(float flat1, float flon1, float flat2, float flon2)
 {
 	float distance = 0.0;
 
-	// add code here
+	// add code here 
+	float lat1 = flat1 * (3.14 / 180);
+	float lat2 = flat2 * (3.14 / 180);
+
+	float latting = (lat2 - lat1) * (3.14 / 180);
+	float longing = (flon2 - flon1) * (3.14 / 180);
+
+	float a = Math.sin(latting / 2) * Math.sin(latting / 2) +
+		Math.cos(lat1) * Math.cos(lat2) *
+		Math.sin(longing / 2) * Math.sin(longing / 2);
 
 	return(distance);
 }
