@@ -83,9 +83,10 @@ Finals Day
 */
 #define NOT_STUPID_BRIGHT 32
 
-#define NEO_ON 1		// NeoPixelShield
-#define TRM_ON 1		// SerialTerminal
-#define GPS_ON 1		// Live GPS Message (off = simulated)
+#define NEO_ON	1		// NeoPixelShield
+#define TRM_ON	1		// SerialTerminal
+#define GPS_ON	1		// Live GPS Message (off = simulated)
+#define SDC_ON	0
 
 // define pin usage
 #define NEO_TX	6		// NEO transmit
@@ -100,7 +101,6 @@ char cstr[GPS_RX_BUFSIZ];
 uint8_t target = 0;		// target number
 float heading = 0.0;	// target heading
 float distance = 0.0;	// target distance
-File mapFile;			// current file to write the map data
 
 #if GPS_ON
 #include <SoftwareSerial.h>
@@ -114,6 +114,7 @@ Adafruit_NeoPixel strip = Adafruit_NeoPixel(40, NEO_TX, NEO_GRB + NEO_KHZ800);
 
 #if SDC_ON
 #include <SD.h>
+File mapFile;			// current file to write the map data
 #endif
 
 /*
@@ -227,7 +228,7 @@ float calcBearing(float flat1, float flon1, float flat2, float flon2)
 	
 	bearing = atan2(y, x);
 	bearing = DEG_TO_RAD*bearing;
-	bearing = modf(bearing + 360, 360);
+	bearing = fmod(bearing + 360.0f, 360.0f);
 
 	return(bearing);
 }
@@ -247,36 +248,29 @@ parameters are in global data space.
 */
 void setNeoPixel(uint8_t _target, float _heading, float _distance)
 {
+	
 
-
-	uint8_t d5 = distance / 250;
-	float curCol = (255.0f / 10.0f) * d5;
+	float d10 =  (2500 - distance) / 250;
+	
+	float curCol = (255.0f / 10.0f) * d10;
 
 	for (uint8_t i = 1, j = 0; i < 40; i += 8, ++j) {
-		if (j <= d5)
-			strip.setPixelColor(i, (curCol), 255 - (curCol), 0);
-		else
-			strip.setPixelColor(i, 0);
+		if (d10 / 2 == 5)
+			strip.setPixelColor(i, 255, 255, 255);
+		else {
+			if (j <= (d10 / 2))
+				strip.setPixelColor(i, 255 - (curCol), (curCol), 0);
+			else
+				strip.setPixelColor(i, 0);
+		}
 	}
 	strip.show();
-	// add code here
-	delay(100);
 
-	if (distance == 0)
-		distance = 1250;
-	else if (distance == 1250)
+	Serial.print("D10: ");
+	Serial.println(d10);
+	distance -= 100;
+	if (distance < 0)
 		distance = 2500;
-	else if (distance == 2500)
-		distance = 0;
-
-	Serial.print("D5: ");
-	Serial.println(d5);
-
-	Serial.print("Color: ");
-	Serial.println(curCol);
-
-	Serial.print("distance: ");
-	Serial.println(distance);
 }
 
 #endif	// NEO_ON
@@ -419,11 +413,11 @@ void setup(void)
 	SD.begin(115200);
 	File root = SD.open("/");
 	uint8_t fileCount = CountDirFiles(root);
-	char *mapNumber = itoa(fileCount);
+	const char *mapNumber = itoa(fileCount);
 	root.close();
 
 	if (fileCount < 10)
-		(*mapNumber) = "0" + (*mapNumber);
+		mapNumber = "0" + (*mapNumber);
 
 	mapFile = SD.open("MyMap" + (*mapNumber) + ".txt", FILE_WRITE);
 #endif
@@ -477,23 +471,25 @@ void loop(void)
 	Counts all files in a directory. This doesn't include
 	files inside any of the subdirectories.
 */
-uint8_t CountDirFiles(File dir)
-{
-	if (!dir)
-		return 0;
-
-	uint8_t count = 1;
-	while (true)
-	{
-		File entry = dir.openNextFile();
-
-		if (!entry)
-			break;
-
-		++count;
-		entry.close();
-	}
-
-	count = count % 100;
-	return count;
-}
+#if SDC_ON
+//uint8_t CountDirFiles(File dir)
+//{
+//	if (!dir)
+//		return 0;
+//
+//	uint8_t count = 1;
+//	while (true)
+//	{
+//		File entry = dir.openNextFile();
+//
+//		if (!entry)
+//			break;
+//
+//		++count;
+//		entry.close();
+//	}
+//
+//	count = count % 100;
+//	return count;
+//}
+#endif
