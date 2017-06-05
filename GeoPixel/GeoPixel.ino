@@ -226,7 +226,19 @@ float calcBearing(float flat1, float flon1, float flat2, float flon2)
 {
 	float bearing = 0.0;
 
-	// add code here
+	float flatRad1, flatRad2, flonRad1, flonRad2;
+	flatRad1 = DEG_TO_RAD*flat1;
+	flatRad2 = DEG_TO_RAD*flat2;
+	flonRad1 = DEG_TO_RAD*flon1;
+	flonRad2 = DEG_TO_RAD*flon2;
+
+	float x, y;
+	y = sin(flonRad2 - flonRad1) * cos(flatRad2);
+	x = cos(flatRad1) * sin(flatRad2) - sin(flatRad1)*cos(flatRad2)*cos(flonRad2 - flonRad1);
+	
+	bearing = atan2(y, x);
+	bearing = DEG_TO_RAD*bearing;
+	bearing = modf(bearing + 360, 360);
 
 	return(bearing);
 }
