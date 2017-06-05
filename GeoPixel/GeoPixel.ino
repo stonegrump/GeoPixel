@@ -81,10 +81,12 @@ enable all these libraries at the same time.  You must have have
 NEO_ON, GPS_ON and SDC_ON during the actual GeoCache Flag Hunt on
 Finals Day
 */
-#define NEO_ON 0		// NeoPixelShield
+#define NOT_STUPID_BRIGHT 32
+
+#define NEO_ON 1		// NeoPixelShield
 #define TRM_ON 1		// SerialTerminal
 #define SDC_ON 0		// SecureDigital
-#define GPS_ON 1		// Live GPS Message (off = simulated)
+#define GPS_ON 0		// Live GPS Message (off = simulated)
 
 // define pin usage
 #define NEO_TX	6		// NEO transmit
@@ -231,9 +233,38 @@ by this function do not need to be passed in, since these
 parameters are in global data space.
 
 */
-void setNeoPixel(void)
+void setNeoPixel(uint8_t _target, float _heading, float _distance)
 {
+
+
+	uint8_t d5 = distance / 250;
+	float curCol = (255.0f / 10.0f) * d5;
+
+	for (uint8_t i = 1, j = 0; i < 40; i += 8, ++j) {
+		if (j <= d5)
+			strip.setPixelColor(i, (curCol), 255 - (curCol), 0);
+		else
+			strip.setPixelColor(i, 0);
+	}
+	strip.show();
 	// add code here
+	delay(100);
+
+	if (distance == 0)
+		distance = 1250;
+	else if (distance == 1250)
+		distance = 2500;
+	else if (distance == 2500)
+		distance = 0;
+
+	Serial.print("D5: ");
+	Serial.println(d5);
+
+	Serial.print("Color: ");
+	Serial.println(curCol);
+
+	Serial.print("distance: ");
+	Serial.println(distance);
 }
 
 #endif	// NEO_ON
@@ -359,6 +390,11 @@ void setup(void)
 
 #if NEO_ON
 	// init NeoPixel Shield
+
+	strip.begin();
+	strip.show(); // Initialize all pixels to 'off'
+
+	strip.setBrightness(NOT_STUPID_BRIGHT);
 #endif	
 
 #if SDC_ON
