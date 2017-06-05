@@ -147,6 +147,9 @@ These are GPS command messages (only a few are used).
 
 #endif // GPS_ON
 
+//#include <iostream>
+//#include <sstream>
+
 /*************************************************
 **** GEO FUNCTIONS - BEGIN ***********************
 *************************************************/
@@ -168,7 +171,33 @@ float degMin2DecDeg(char *cind, char *ccor)
 {
 	float degrees = 0.0;
 
-	// add code here
+	//seperate Num from Char*
+	float degreePart, minutePart;
+	String degreeString, minuteString;
+
+	for (int i = 0; i < 9; i++)
+	{
+		if (i < 2)
+		{
+			degreeString += ccor[i];
+		}
+		else
+		{
+			minuteString += ccor[i];
+		}
+	}
+
+	degreePart = atof(degreeString.c_str());
+	minutePart = atof(minuteString.c_str());
+
+	//convert
+	degrees = degreePart + minutePart / 60.0;
+
+	//negate if S or W
+	if (cind == "S" || cind == "s" || cind == "W" || cind == "w")
+	{
+		degrees *= -1.0;
+	}
 
 	return(degrees);
 }
@@ -391,6 +420,7 @@ void setup(void)
 #endif		
 
 	// init target button here
+
 }
 
 void loop(void)
