@@ -85,8 +85,7 @@ Finals Day
 
 #define NEO_ON 1		// NeoPixelShield
 #define TRM_ON 1		// SerialTerminal
-#define SDC_ON 0		// SecureDigital
-#define GPS_ON 0		// Live GPS Message (off = simulated)
+#define GPS_ON 1		// Live GPS Message (off = simulated)
 
 // define pin usage
 #define NEO_TX	6		// NEO transmit
@@ -101,6 +100,7 @@ char cstr[GPS_RX_BUFSIZ];
 uint8_t target = 0;		// target number
 float heading = 0.0;	// target heading
 float distance = 0.0;	// target distance
+File mapFile;			// current file to write the map data
 
 #if GPS_ON
 #include <SoftwareSerial.h>
@@ -416,6 +416,16 @@ void setup(void)
 	sequential number of the file.  The filename can not be more than 8
 	chars in length (excluding the ".txt").
 	*/
+	SD.begin(115200);
+	File root = SD.open("/");
+	uint8_t fileCount = CountDirFiles(root);
+	char *mapNumber = itoa(fileCount);
+	root.close();
+
+	if (fileCount < 10)
+		(*mapNumber) = "0" + (*mapNumber);
+
+	mapFile = SD.open("MyMap" + (*mapNumber) + ".txt", FILE_WRITE);
 #endif
 
 #if GPS_ON
@@ -461,4 +471,29 @@ void loop(void)
 	// print debug information to Serial Terminal
 	Serial.println(cstr);
 #endif		
+}
+
+/*
+	Counts all files in a directory. This doesn't include
+	files inside any of the subdirectories.
+*/
+uint8_t CountDirFiles(File dir)
+{
+	if (!dir)
+		return 0;
+
+	uint8_t count = 1;
+	while (true)
+	{
+		File entry = dir.openNextFile();
+
+		if (!entry)
+			break;
+
+		++count;
+		entry.close();
+	}
+
+	count = count % 100;
+	return count;
 }
