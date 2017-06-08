@@ -86,7 +86,7 @@ Finals Day
 #define NEO_ON 0		// NeoPixelShield
 #define TRM_ON 1		// SerialTerminal
 #define SDC_ON 1		// SD Card
-#define GPS_ON 0		// Live GPS Message (off = simulated)
+#define GPS_ON 1		// Live GPS Message (off = simulated)
 
 // define pin usage
 #define NEO_TX	6		// NEO transmit
@@ -446,29 +446,28 @@ void setup(void)
 	sequential number of the file.  The filename can not be more than 8
 	chars in length (excluding the ".txt").
 	*/
-	SD.begin(115200);
+	SD.begin();
 	File root = SD.open("/");
-	uint8_t fileCount = 1;
+	int8_t fileCount = -2;
 	while (true)
 	{
-		if (!root)
+		File entry = root.openNextFile();\
+		if (!entry)
 		{
-			fileCount = 0;
+			entry.close();
 			break;
 		}
-		File entry = root.openNextFile();
-		if (!entry)
-			break;
 		++fileCount;
 		entry.close();
 	}
 
 	fileCount = fileCount % 100;
-	char* mapFileName = "MyMap";
-	char mapNumber[2];
-	itoa(fileCount, mapNumber, DEC);
-	strcat(mapFileName, mapNumber);
-	strcat(mapFileName, ".txt");
+	char mapFileName[15] = "MyMapNN.txt";
+	if (fileCount < 10)
+		mapFileName[5] = '0';
+	else
+		mapFileName[5] = 48 + (fileCount / 10);
+	mapFileName[6] = 48 + (fileCount % 10);
 	root.close();
 
 	mapFile = SD.open(mapFileName, FILE_WRITE);
@@ -504,6 +503,8 @@ void loop(void)
 
 #if SDC_ON
 		// write current position to SecureDigital then flush
+		mapFile.write(cstr + '\n');
+		mapFile.flush();
 #endif
 
 		break;
