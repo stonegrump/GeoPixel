@@ -81,10 +81,12 @@ enable all these libraries at the same time.  You must have have
 NEO_ON, GPS_ON and SDC_ON during the actual GeoCache Flag Hunt on
 Finals Day
 */
-#define NEO_ON 0		// NeoPixelShield
+#define NOT_STUPID_BRIGHT 16
+
+#define NEO_ON	1		// NeoPixelShield
 #define TRM_ON 1		// SerialTerminal
-#define SDC_ON 0		// SecureDigital
-#define GPS_ON 1		// Live GPS Message (off = simulated)
+#define GPS_ON	0		// Live GPS Message (off = simulated)
+#define SDC_ON 1		// SD Card
 
 // define pin usage
 #define NEO_TX	6		// NEO transmit
@@ -99,6 +101,11 @@ char cstr[GPS_RX_BUFSIZ];
 uint8_t target = 0;		// target number
 float heading = 0.0;	// target heading
 float distance = 0.0;	// target distance
+bool previousButtonState = false;
+
+float lat;
+float lon;
+//File mapFile;			// current file to write the map data
 
 #if GPS_ON
 #include <SoftwareSerial.h>
@@ -112,6 +119,7 @@ Adafruit_NeoPixel strip = Adafruit_NeoPixel(40, NEO_TX, NEO_GRB + NEO_KHZ800);
 
 #if SDC_ON
 #include <SD.h>
+File mapFile;			// current file to write the map data
 #endif
 
 /*
@@ -147,6 +155,9 @@ These are GPS command messages (only a few are used).
 
 #endif // GPS_ON
 
+//#include <iostream>
+//#include <sstream>
+
 /*************************************************
 **** GEO FUNCTIONS - BEGIN ***********************
 *************************************************/
@@ -169,8 +180,43 @@ float degMin2DecDeg(char *cind, char *ccor)
 {
 	float degrees = 0.0;
 
-	// add code here
+	//seperate Num from Char*
+	double degreePart, minutePart;
+	//String degreeString, minuteString;
+	char degreeString[2], minuteString[7];
 
+	for (int i = 0; i < 9; i++)
+	{
+		if (i < 2)
+		{
+			degreeString[i] = ccor[i];
+		}
+		else
+		{			
+			minuteString[i - 2] = ccor[i];
+		}
+	}
+
+	//degreePart = atof(degreeString.c_str());
+	//minutePart = atof(minuteString.c_str());
+
+	degreePart = strtod(degreeString, NULL);
+	minutePart = strtod(minuteString, NULL);
+
+	//convert
+	degrees = degreePart + minutePart / 60.0;
+
+	//negate if S or W
+	if (*cind == 'S' || *cind == 's' || *cind == 'W' || *cind == 'w')
+	{
+		degrees *= -1.0;
+	}
+
+	//Serial.println(degreeString);
+	//Serial.println(minuteString);
+	//Serial.println(String(degreePart, 6).c_str());
+	//Serial.println(String(minutePart, 6).c_str());
+	//Serial.println(String(degrees, 6).c_str());
 
 	return(degrees);
 }
@@ -242,7 +288,7 @@ float calcBearing(float flat1, float flon1, float flat2, float flon2)
 	
 	bearing = atan2(y, x);
 	bearing = DEG_TO_RAD*bearing;
-	bearing = modf(bearing + 360, 360);
+	bearing = fmod(bearing + 360.0f, 360.0f);
 
 	return(bearing);
 }
@@ -260,9 +306,77 @@ by this function do not need to be passed in, since these
 parameters are in global data space.
 
 */
-void setNeoPixel(void)
+void setNeoPixel(uint8_t _target, float _heading, float _distance)
 {
-	// add code here
+
+
+	float d10 = (2500.0 - distance) / 250.0;
+	uint16_t secondBase = (2500 - distance) - ((uint8_t)d10 * 250);
+
+	float curCol = (255.0f / 10.0f) * d10;
+
+	int8_t i = 37, j = 0;
+	for (i = 37, j = 0; i > 0; i -= 8, ++j) {
+		if (d10 / 2 == 5)
+			strip.setPixelColor(i, 255, 255, 255);
+		else {
+			if (j <= (d10 / 2))
+				strip.setPixelColor(i, 255 - (curCol), (curCol), 0);
+			else
+				strip.setPixelColor(i, 0);
+}
+		for (int8_t x = 38, y = 0; x > 0; x -= 8, ++y) {
+			if (secondBase / 50 == 5)
+				strip.setPixelColor(x, 255, 255, 255);
+			else {
+				if (y <= (secondBase / 50))
+					strip.setPixelColor(x, 255 - (secondBase), (secondBase), 0);
+				else
+					strip.setPixelColor(x, 0);
+			}
+		}
+	}
+
+	heading += 10;
+	if (heading < 0 || heading > 360)
+		heading = 0;
+
+	uint8_t outerLEDs[16]{ 2,3,4,12,20,28,36,35,34,33,32, 24, 16, 8, 0, 1 };
+	uint8_t innerLEDs[8]{ 10, 11, 19, 27, 26, 25, 17, 9 };
+	uint8_t centerLED = 18;
+	uint8_t dir = (uint8_t)(_heading / 22.5);
+	for (i = 0; i < 16; ++i) {
+		if (i == dir)
+			strip.setPixelColor(outerLEDs[i], 255 - (curCol), curCol, 0);
+		else
+			strip.setPixelColor(outerLEDs[i], 64, 192, 128);
+	}
+	for (i = 0; i < 8; ++i) {
+		if (i == (dir >> 1))
+			strip.setPixelColor(innerLEDs[i], 255 - (curCol), curCol, 0);
+		else
+			strip.setPixelColor(innerLEDs[i], 64, 192, 128);
+	}
+	strip.setPixelColor(centerLED, 255 - (curCol), curCol, 0);
+
+	for (i = 39, j = 0; i > 7; i -= 8, ++j) {
+		if (j < _target) {
+			strip.setPixelColor(i, 0, 255, 0);
+		}
+		else if (j == _target) {
+			strip.setPixelColor(i, 255, 255, 0);
+		}
+		else {
+			strip.setPixelColor(i, 255, 0, 0);
+		}
+	}
+
+	strip.show();
+
+	
+	distance -= 10;
+	if (distance < 0)
+		distance = 2500;
 }
 
 #endif	// NEO_ON
@@ -388,6 +502,11 @@ void setup(void)
 
 #if NEO_ON
 	// init NeoPixel Shield
+
+	strip.begin();
+	strip.show(); // Initialize all pixels to 'off'
+
+	strip.setBrightness(NOT_STUPID_BRIGHT);
 #endif	
 
 #if SDC_ON
@@ -397,6 +516,31 @@ void setup(void)
 	sequential number of the file.  The filename can not be more than 8
 	chars in length (excluding the ".txt").
 	*/
+	SD.begin();
+	File root = SD.open("/");
+	int8_t fileCount = -2;
+	while (true)
+	{
+		File entry = root.openNextFile();\
+		if (!entry)
+		{
+			entry.close();
+			break;
+		}
+		++fileCount;
+		entry.close();
+	}
+
+	fileCount = fileCount % 100;
+	char mapFileName[15] = "MyMapNN.txt";
+	if (fileCount < 10)
+		mapFileName[5] = '0';
+	else
+		mapFileName[5] = 48 + (fileCount / 10);
+	mapFileName[6] = 48 + (fileCount % 10);
+	root.close();
+
+	mapFile = SD.open(mapFileName, FILE_WRITE);
 #endif
 
 #if GPS_ON
@@ -408,26 +552,122 @@ void setup(void)
 #endif		
 
 	// init target button here
+	pinMode(2, INPUT_PULLUP);
+	
+	//Serial.println("Start converting");
+	//char * c1 = "S";
+	////char * c2 = "9999.9999";
+	//char * c2 = "1234.5678";
+	////char * c2 = "0043.5677";
+	//degMin2DecDeg(c1, c2);
 }
 
 void loop(void)
 {
 	// max 1 second blocking call till GPS message received
 	getGPSMessage();
-
+	bool newButtonState = !digitalRead(2);
 	// if button pressed, set new target
+	if (!previousButtonState && newButtonState) {
+		if (target < 4) {
+			strip.setPixelColor(7, 255, 255, 255);
+			strip.show();
+			target++;
+		}
+	}
+	else if (previousButtonState && !newButtonState)
+	{
+		strip.setPixelColor(7, 0);
+		strip.show();
+	}
+	previousButtonState = newButtonState;
 
 	// if GPRMC message (3rd letter = R)
 	while (cstr[3] == 'R')
 	{
+
+		/*Following is the GPS Shield "GPRMC" Message Structure.This message is received
+			once a second.You must parse the message to obtain the parameters required for
+			the GeoCache project.GPS provides coordinates in Degrees Minutes(DDDMM.MMMM).
+			The coordinates in the following GPRMC sample message, after converting to Decimal
+			Degrees format(DDD.DDDDDD) is latitude(23.118757) and longitude(120.274060).By
+			the way, this coordinate is GlobalTop Technology in Taiwan, who designed and
+			manufactured the GPS Chip.
+
+			"$GPRMC,064951.000,A,2307.1256,N,12016.4438,E,0.03,165.48,260406,3.05,W,A*2C/r/n"
+
+			$GPRMC,         // GPRMC Message
+			064951.000,     // utc time hhmmss.sss
+			A,              // status A=data valid or V=data not valid
+			2307.1256,      // Latitude 2307.1256 (degrees minutes format dddmm.mmmm)
+			N,              // N/S Indicator N=north or S=south
+			12016.4438,     // Longitude 12016.4438 (degrees minutes format dddmm.mmmm)
+			E,              // E/W Indicator E=east or W=west
+			0.03,           // Speed over ground knots
+			165.48,         // Course over ground (decimal degrees format ddd.dd)
+			260406,         // date ddmmyy
+			3.05,           // Magnetic variation (decimal degrees format ddd.dd)
+			W,              // E=east or W=west
+			A               // Mode A=Autonomous D=differential E=Estimated
+			* 2C             // checksum
+			/ r / n            // return and newline
+
+			Following are approximate results calculated from above GPS GPRMC message
+			(when GPS_ON == 0) to the GEOLAT0 / GEOLON0 tree location :
+
+		degMin2DecDeg() LAT 2307.1256 N = 23.118757 decimal degrees
+			degMin2DecDeg() LON 12016.4438 E = 120.274060 decimal degrees
+			calcDistance() to GEOLAT0 / GEOLON0 target = 45335760 feet
+			calcBearing() to GEOLAT0 / GEOLON0 target = 22.999655 degrees
+
+			The resulting relative target bearing to the tree is 217.519650 degrees
+
+			******************************************************************************/
 		// parse message parameters
 
+		double course;
+		char buffer[100];
+		char sChar;
+		uint8_t commaNum = 0;
+		uint16_t modNum;
+
+		for (uint16_t i = 0; i < strlen(cstr); ++i) {
+			for (; cstr[i] != ','; ++i);
+			++i;
+			for (; cstr[i] != ','; ++i);
+			++i;
+			for (; cstr[i] != ','; ++i);
+			++i;
+			modNum = i;
+			for (; cstr[i] != ','; ++i) {
+				buffer[(uint8_t)fmod(i, modNum)] = cstr[i];
+			}
+			++i;
+			sChar = cstr[i];
+			i += 2;
+			lat = degMin2DecDeg(&sChar, buffer);
+
+			modNum = i;
+			for (; cstr[i] != ','; ++i) {
+				buffer[(uint8_t)fmod(i, modNum)] = cstr[i];
+			}
+			++i;
+			sChar = cstr[i];
+			i += 2;
+			lon = degMin2DecDeg(&sChar, buffer);
+
+		}
+
 		// calculated destination heading
+		distance = calcDistance(lat, lon, GEOLAT0, GEOLON0);
 
 		// calculated destination distance
+		heading = calcBearing(lat, lon, GEOLAT0, GEOLON0);
 
 #if SDC_ON
 		// write current position to SecureDigital then flush
+		mapFile.write(cstr + '\n');
+		mapFile.flush();
 #endif
 
 		break;
@@ -443,3 +683,44 @@ void loop(void)
 	Serial.println(cstr);
 #endif		
 }
+
+bool IsButtonPressed(int8_t pin) {
+	bool val;
+	for (int i = 0; i < 1000; ++i) {
+		val = digitalRead(pin);
+		if (val == HIGH)
+			return false;
+	}
+
+	return true;
+}
+//<<<<<<< HEAD
+//}
+
+/*
+	Counts all files in a directory. This doesn't include
+	files inside any of the subdirectories.
+*/
+//uint8_t CountDirFiles(File dir)
+//{
+//	if (!dir)
+//		return 0;
+//
+//	uint8_t count = 1;
+//	while (true)
+//	{
+//		File entry = dir.openNextFile();
+//
+//		if (!entry)
+//			break;
+//
+//		++count;
+//		entry.close();
+//	}
+//
+//	count = count % 100;
+//	return count;
+//}
+//=======
+//}
+//>>>>>>> e22485e95b21365ce0d76071714be86ac0138ce9
