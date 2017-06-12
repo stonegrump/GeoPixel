@@ -677,9 +677,9 @@ void loop(void)
 
 #if SDC_ON
 		// write current position to SecureDigital then flush
-		mapFile.print(lat, 6);
-		mapFile.print(",");
 		mapFile.print(lon, 6);
+		mapFile.print(",");
+		mapFile.print(lat, 6);
 		mapFile.print(",");
 		mapFile.print((int32_t)heading);
 		mapFile.print(".");
