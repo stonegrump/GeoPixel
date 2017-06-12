@@ -86,7 +86,7 @@ Finals Day
 #define NEO_ON	1		// NeoPixelShield
 #define TRM_ON	1		// SerialTerminal
 #define GPS_ON	0		// Live GPS Message (off = simulated)
-#define SDC_ON 1		// SD Card
+#define SDC_ON  1		// SD Card
 
 // define pin usage
 #define NEO_TX	6		// NEO transmit
