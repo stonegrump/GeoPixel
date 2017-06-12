@@ -100,7 +100,7 @@ char cstr[GPS_RX_BUFSIZ];
 uint8_t target = 0;		// target number
 float heading = 0.0;	// target heading
 float distance = 0.0;	// target distance
-File mapFile;			// current file to write the map data
+//File mapFile;			// current file to write the map data
 
 #if GPS_ON
 #include <SoftwareSerial.h>
@@ -174,23 +174,27 @@ float degMin2DecDeg(char *cind, char *ccor)
 	float degrees = 0.0;
 
 	//seperate Num from Char*
-	float degreePart, minutePart;
+	double degreePart, minutePart;
 	String degreeString, minuteString;
+	char degreeString[2], minuteString[7];
 
 	for (int i = 0; i < 9; i++)
 	{
 		if (i < 2)
 		{
-			degreeString += ccor[i];
+			degreeString[i] = ccor[i];
 		}
 		else
-		{
-			minuteString += ccor[i];
+		{			
+			minuteString[i - 2] = ccor[i];
 		}
 	}
 
-	degreePart = atof(degreeString.c_str());
-	minutePart = atof(minuteString.c_str());
+	//degreePart = atof(degreeString.c_str());
+	//minutePart = atof(minuteString.c_str());
+
+	degreePart = strtod(degreeString, NULL);
+	minutePart = strtod(minuteString, NULL);
 
 	//convert
 	degrees = degreePart + minutePart / 60.0;
@@ -200,6 +204,12 @@ float degMin2DecDeg(char *cind, char *ccor)
 	{
 		degrees *= -1.0;
 	}
+
+	//Serial.println(degreeString);
+	//Serial.println(minuteString);
+	//Serial.println(String(degreePart, 6).c_str());
+	//Serial.println(String(minutePart, 6).c_str());
+	//Serial.println(String(degrees, 6).c_str());
 
 	return(degrees);
 }
@@ -466,7 +476,13 @@ void setup(void)
 #endif		
 
 	// init target button here
-
+	
+	//Serial.println("Start converting");
+	//char * c1 = "S";
+	////char * c2 = "9999.9999";
+	//char * c2 = "1234.5678";
+	////char * c2 = "0043.5677";
+	//degMin2DecDeg(c1, c2);
 }
 
 void loop(void)
@@ -507,23 +523,23 @@ void loop(void)
 	Counts all files in a directory. This doesn't include
 	files inside any of the subdirectories.
 */
-uint8_t CountDirFiles(File dir)
-{
-	if (!dir)
-		return 0;
-
-	uint8_t count = 1;
-	while (true)
-	{
-		File entry = dir.openNextFile();
-
-		if (!entry)
-			break;
-
-		++count;
-		entry.close();
-	}
-
-	count = count % 100;
-	return count;
-}
+//uint8_t CountDirFiles(File dir)
+//{
+//	if (!dir)
+//		return 0;
+//
+//	uint8_t count = 1;
+//	while (true)
+//	{
+//		File entry = dir.openNextFile();
+//
+//		if (!entry)
+//			break;
+//
+//		++count;
+//		entry.close();
+//	}
+//
+//	count = count % 100;
+//	return count;
+//}
