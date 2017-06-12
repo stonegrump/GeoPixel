@@ -83,8 +83,9 @@ Finals Day
 */
 #define NOT_STUPID_BRIGHT 32
 
-#define NEO_ON 1		// NeoPixelShield
+#define NEO_ON 0		// NeoPixelShield
 #define TRM_ON 1		// SerialTerminal
+#define SDC_ON 1		// SD Card
 #define GPS_ON 1		// Live GPS Message (off = simulated)
 
 // define pin usage
@@ -100,7 +101,10 @@ char cstr[GPS_RX_BUFSIZ];
 uint8_t target = 0;		// target number
 float heading = 0.0;	// target heading
 float distance = 0.0;	// target distance
+<<<<<<< HEAD
 //File mapFile;			// current file to write the map data
+=======
+>>>>>>> e22485e95b21365ce0d76071714be86ac0138ce9
 
 #if GPS_ON
 #include <SoftwareSerial.h>
@@ -114,6 +118,7 @@ Adafruit_NeoPixel strip = Adafruit_NeoPixel(40, NEO_TX, NEO_GRB + NEO_KHZ800);
 
 #if SDC_ON
 #include <SD.h>
+File mapFile;			// current file to write the map data
 #endif
 
 /*
@@ -455,16 +460,31 @@ void setup(void)
 	sequential number of the file.  The filename can not be more than 8
 	chars in length (excluding the ".txt").
 	*/
-	SD.begin(115200);
+	SD.begin();
 	File root = SD.open("/");
-	uint8_t fileCount = CountDirFiles(root);
-	char *mapNumber = itoa(fileCount);
+	int8_t fileCount = -2;
+	while (true)
+	{
+		File entry = root.openNextFile();\
+		if (!entry)
+		{
+			entry.close();
+			break;
+		}
+		++fileCount;
+		entry.close();
+	}
+
+	fileCount = fileCount % 100;
+	char mapFileName[15] = "MyMapNN.txt";
+	if (fileCount < 10)
+		mapFileName[5] = '0';
+	else
+		mapFileName[5] = 48 + (fileCount / 10);
+	mapFileName[6] = 48 + (fileCount % 10);
 	root.close();
 
-	if (fileCount < 10)
-		(*mapNumber) = "0" + (*mapNumber);
-
-	mapFile = SD.open("MyMap" + (*mapNumber) + ".txt", FILE_WRITE);
+	mapFile = SD.open(mapFileName, FILE_WRITE);
 #endif
 
 #if GPS_ON
@@ -503,6 +523,8 @@ void loop(void)
 
 #if SDC_ON
 		// write current position to SecureDigital then flush
+		mapFile.write(cstr + '\n');
+		mapFile.flush();
 #endif
 
 		break;
@@ -517,6 +539,7 @@ void loop(void)
 	// print debug information to Serial Terminal
 	Serial.println(cstr);
 #endif		
+<<<<<<< HEAD
 }
 
 /*
@@ -543,3 +566,6 @@ void loop(void)
 //	count = count % 100;
 //	return count;
 //}
+=======
+}
+>>>>>>> e22485e95b21365ce0d76071714be86ac0138ce9
