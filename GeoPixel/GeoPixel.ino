@@ -84,9 +84,9 @@ Finals Day
 #define NOT_STUPID_BRIGHT 16
 
 #define NEO_ON	1		// NeoPixelShield
-#define TRM_ON	1		// SerialTerminal
+#define TRM_ON	0		// SerialTerminal
 #define GPS_ON	0		// Live GPS Message (off = simulated)
-#define SDC_ON  1		// SD Card
+#define SDC_ON  0		// SD Card
 
 // define pin usage
 #define NEO_TX	6		// NEO transmit
@@ -204,7 +204,6 @@ float degMin2DecDeg(char *cind, char *ccor)
 
 	degreePart = strtod(degreeString, NULL);
 	minutePart = strtod(minuteString, NULL);
-	Serial.println(degreePart);
 
 	//convert
 	degrees = degreePart + (minutePart / 60.0);
@@ -238,14 +237,14 @@ Mike is responsible//yes yes
 float calcDistance(float flat1, float flon1, float flat2, float flon2)
 {
 	float distance = 0.0;
-  int radius = 6371;
+  int radius = 6371000;
   
 	// add code here 
-	float lat1 = flat1 * (3.14 / 180);
-	float lat2 = flat2 * (3.14 / 180);
+	float lat1 = flat1 * DEG_TO_RAD;
+	float lat2 = flat2 * DEG_TO_RAD;
 
-	float latting = (lat2 - lat1) * (3.14 / 180);
-	float longing = (flon2 - flon1) * (3.14 / 180);
+	float latting = (flat2 - flat1) * DEG_TO_RAD;
+	float longing = (flon2 - flon1) * DEG_TO_RAD;
 
 	float a = sin(latting / 2) * sin(latting / 2) +
 		cos(lat1) * cos(lat2) *
@@ -624,7 +623,7 @@ void loop(void)
 
 		double course;
 		char buffer[10];
-		char sChar;
+		char sChar; char buf[6];
 		uint8_t commaNum = 0;
 		uint16_t modNum;
 
@@ -653,13 +652,25 @@ void loop(void)
 			i += 2;
 			lon = degMin2DecDeg(&sChar, buffer);
 
+			for (; cstr[i] != ','; ++i);
+			++i;
+			
+			modNum = i;
+			for (; cstr[i] != ','; ++i) {
+				buf[(uint8_t)fmod(i, modNum)] = cstr[i];
+			}
+			course = strtod(buf, nullptr);
+			break;
 		}
 
 		// calculated destination heading
-		distance = calcDistance(lat, lon, GEOLAT0, GEOLON0);
+		distance = calcDistance(lat, lon, GEOLAT0, GEOLON0) * 3.28084;
 
 		// calculated destination distance
 		heading = calcBearing(lat, lon, GEOLAT0, GEOLON0);
+
+		Serial.println(distance);
+		Serial.println(course);
 
 #if SDC_ON
 		// write current position to SecureDigital then flush
