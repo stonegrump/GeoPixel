@@ -81,12 +81,12 @@ enable all these libraries at the same time.  You must have have
 NEO_ON, GPS_ON and SDC_ON during the actual GeoCache Flag Hunt on
 Finals Day
 */
-#define NOT_STUPID_BRIGHT 16
+//#define NOT_STUPID_BRIGHT 16
 
 #define NEO_ON	1		// NeoPixelShield
 #define TRM_ON	0		// SerialTerminal
-#define GPS_ON	0		// Live GPS Message (off = simulated)
-#define SDC_ON  0		// SD Card
+#define GPS_ON	1		// Live GPS Message (off = simulated)
+#define SDC_ON  1		// SD Card
 
 // define pin usage
 #define NEO_TX	6		// NEO transmit
@@ -128,6 +128,14 @@ in the parking lot just outside the front entrance of FS3B-116.
 */
 #define GEOLAT0 28.594532
 #define GEOLON0 -81.304437
+
+struct Location {
+	float lat, lon;
+	Location(float _lat, float _lon) : lat(_lat), lon(_lon) {}
+	Location() : lat(0), lon(0){}
+};
+
+Location *locations;
 
 #if GPS_ON
 /*
@@ -237,7 +245,7 @@ Mike is responsible//yes yes
 float calcDistance(float flat1, float flon1, float flat2, float flon2)
 {
 	float distance = 0.0;
-  int radius = 6371000;
+	uint32_t radius = 6371;
   
 	// add code here 
 	float lat1 = flat1 * DEG_TO_RAD;
@@ -250,9 +258,9 @@ float calcDistance(float flat1, float flon1, float flat2, float flon2)
 		cos(lat1) * cos(lat2) *
 		sin(longing / 2) * sin(longing / 2);
 
-  float c = 2 * atan2(sqrt(a), sqrt(1-a));
+	float c = 2 * atan2(sqrt(a), sqrt(1-a));
 
-  distance = radius * c;
+	distance = radius * c;
 	return(distance);
 }
 
@@ -304,7 +312,7 @@ parameters are in global data space.
 */
 void setNeoPixel(uint8_t _target, float _heading, float _distance)
 {
-
+	strip.setBrightness(map(analogRead(A0), 0, 1023, 0, 255));
 
 	float d10 = (2500.0 - distance) / 250.0;
 	uint16_t secondBase = (2500 - distance) - ((uint8_t)d10 * 250);
@@ -491,6 +499,11 @@ void getGPSMessage(void)
 
 void setup(void)
 {
+	locations = new Location[4];
+	locations[0] = Location(GEOLAT0, GEOLON0);
+	locations[1] = Location(28.596829, -81.306487);
+	locations[2] = Location(28.596710, -81.304908);
+	locations[3] = Location(28.595726, -81.304348);
 #if TRM_ON
 	// init serial interface
 	Serial.begin(115200);
@@ -502,7 +515,7 @@ void setup(void)
 	strip.begin();
 	strip.show(); // Initialize all pixels to 'off'
 
-	strip.setBrightness(NOT_STUPID_BRIGHT);
+	//strip.setBrightness(NOT_STUPID_BRIGHT);
 #endif	
 
 #if SDC_ON
@@ -549,13 +562,6 @@ void setup(void)
 
 	// init target button here
 	pinMode(2, INPUT_PULLUP);
-	
-	//Serial.println("Start converting");
-	//char * c1 = "S";
-	////char * c2 = "9999.9999";
-	//char * c2 = "1234.5678";
-	////char * c2 = "0043.5677";
-	//degMin2DecDeg(c1, c2);
 }
 
 void loop(void)
@@ -570,6 +576,9 @@ void loop(void)
 			strip.show();
 			target++;
 		}
+		else {
+			target = 0;
+		}
 	}
 	else if (previousButtonState && !newButtonState)
 	{
@@ -581,44 +590,6 @@ void loop(void)
 	// if GPRMC message (3rd letter = R)
 	while (cstr[3] == 'R')
 	{
-
-		/*Following is the GPS Shield "GPRMC" Message Structure.This message is received
-			once a second.You must parse the message to obtain the parameters required for
-			the GeoCache project.GPS provides coordinates in Degrees Minutes(DDDMM.MMMM).
-			The coordinates in the following GPRMC sample message, after converting to Decimal
-			Degrees format(DDD.DDDDDD) is latitude(23.118757) and longitude(120.274060).By
-			the way, this coordinate is GlobalTop Technology in Taiwan, who designed and
-			manufactured the GPS Chip.
-
-			"$GPRMC,064951.000,A,2307.1256,N,12016.4438,E,0.03,165.48,260406,3.05,W,A*2C/r/n"
-
-			$GPRMC,         // GPRMC Message
-			064951.000,     // utc time hhmmss.sss
-			A,              // status A=data valid or V=data not valid
-			2307.1256,      // Latitude 2307.1256 (degrees minutes format dddmm.mmmm)
-			N,              // N/S Indicator N=north or S=south
-			12016.4438,     // Longitude 12016.4438 (degrees minutes format dddmm.mmmm)
-			E,              // E/W Indicator E=east or W=west
-			0.03,           // Speed over ground knots
-			165.48,         // Course over ground (decimal degrees format ddd.dd)
-			260406,         // date ddmmyy
-			3.05,           // Magnetic variation (decimal degrees format ddd.dd)
-			W,              // E=east or W=west
-			A               // Mode A=Autonomous D=differential E=Estimated
-			* 2C             // checksum
-			/ r / n            // return and newline
-
-			Following are approximate results calculated from above GPS GPRMC message
-			(when GPS_ON == 0) to the GEOLAT0 / GEOLON0 tree location :
-
-		degMin2DecDeg() LAT 2307.1256 N = 23.118757 decimal degrees
-			degMin2DecDeg() LON 12016.4438 E = 120.274060 decimal degrees
-			calcDistance() to GEOLAT0 / GEOLON0 target = 45335760 feet
-			calcBearing() to GEOLAT0 / GEOLON0 target = 22.999655 degrees
-
-			The resulting relative target bearing to the tree is 217.519650 degrees
-
-			******************************************************************************/
 		// parse message parameters
 
 		double course;
@@ -627,7 +598,7 @@ void loop(void)
 		uint8_t commaNum = 0;
 		uint16_t modNum;
 
-		for (uint16_t i = 0; i < strlen(cstr); ++i) {
+		uint16_t i = 0;
 			for (; cstr[i] != ','; ++i);
 			++i;
 			for (; cstr[i] != ','; ++i);
@@ -660,29 +631,31 @@ void loop(void)
 				buf[(uint8_t)fmod(i, modNum)] = cstr[i];
 			}
 			course = strtod(buf, nullptr);
-			break;
-		}
+		
 
 		// calculated destination heading
-		distance = calcDistance(lat, lon, GEOLAT0, GEOLON0) * 3.28084;
+		distance = calcDistance(lat, lon, locations[target].lat, locations[target].lon) * 3280.84;
 
 		// calculated destination distance
-		heading = calcBearing(lat, lon, GEOLAT0, GEOLON0);
-
+		heading = calcBearing(lat, lon, locations[target].lat, locations[target].lon);
+		float relative = fmod((heading - course) + 360, 360);
+		heading = relative;
+		Serial.println(heading);
 		Serial.println(distance);
-		Serial.println(course);
+
 
 #if SDC_ON
 		// write current position to SecureDigital then flush
-		Serial.print(lat);
+		/*Serial.print(lat);
 		Serial.print(", ");
 		Serial.print(lon);
 		Serial.print(", ");
 		Serial.print(heading);
 		Serial.print(".");
 		Serial.print(distance);
-		Serial.print('/n');
-		//mapFile.flush();
+		Serial.print('/n');*/
+		mapFile.write("We're in babaaooooeeeyyy!");
+		mapFile.flush();
 #endif
 
 		break;
