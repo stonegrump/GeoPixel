@@ -183,7 +183,16 @@ float degMin2DecDeg(char *cind, char *ccor)
 	//seperate Num from Char*
 	double degreePart, minutePart;
 	//String degreeString, minuteString;
+	char degreeString[3], minuteString[7];
+
+	uint8_t degStrLen = 3;
+	for (uint8_t i = 0; i < 5; ++i) {
+		if (ccor[i] == '.')
+		{
+			degStrLen = 2;
+		}
 	}
+
 
 	for (uint8_t i = 0; i < degStrLen + 7; i++)
 	{
@@ -195,6 +204,7 @@ float degMin2DecDeg(char *cind, char *ccor)
 
 	degreePart = strtod(degreeString, NULL);
 	minutePart = strtod(minuteString, NULL);
+	Serial.println(degreePart);
 
 	//convert
 	degrees = degreePart + (minutePart / 60.0);
@@ -204,7 +214,6 @@ float degMin2DecDeg(char *cind, char *ccor)
 	{
 		degrees *= -1.0;
 	}
-
 
 	return(degrees);
 }
