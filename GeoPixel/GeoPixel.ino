@@ -513,31 +513,34 @@ void setup(void)
 	sequential number of the file.  The filename can not be more than 8
 	chars in length (excluding the ".txt").
 	*/
-	SD.begin();
-	File root = SD.open("/");
-	int8_t fileCount = -1;
-	while (true)
+	if (SD.begin())
 	{
-		File entry = root.openNextFile();\
-		if (!entry)
+		File root = SD.open("/");
+		int8_t fileCount = -1;
+		while (true)
 		{
+			File entry = root.openNextFile();
+			if (!entry)
+			{
+				entry.close();
+				break;
+			}
+			++fileCount;
 			entry.close();
-			break;
 		}
-		++fileCount;
-		entry.close();
+
+		fileCount = fileCount % 100;
+		char mapFileName[15] = "MyMapNN.txt";
+		if (fileCount < 10)
+			mapFileName[5] = '0';
+		else
+			mapFileName[5] = 48 + (fileCount / 10);
+		mapFileName[6] = 48 + (fileCount % 10);
+		root.close();
+		Serial.println(mapFileName);
+		mapFile = SD.open(mapFileName, FILE_WRITE);
 	}
-
-	fileCount = fileCount % 100;
-	char mapFileName[15] = "MyMapNN.txt";
-	if (fileCount < 10)
-		mapFileName[5] = '0';
-	else
-		mapFileName[5] = 48 + (fileCount / 10);
-	mapFileName[6] = 48 + (fileCount % 10);
-	root.close();
-
-	mapFile = SD.open(mapFileName, FILE_WRITE);
+	
 #endif
 
 #if GPS_ON
@@ -663,15 +666,14 @@ void loop(void)
 
 #if SDC_ON
 		// write current position to SecureDigital then flush
-		Serial.print(lat);
-		Serial.print(", ");
-		Serial.print(lon);
-		Serial.print(", ");
-		Serial.print(heading);
-		Serial.print(".");
-		Serial.print(distance);
-		Serial.print('/n');
-		//mapFile.flush();
+		mapFile.print(lat, 6);
+		mapFile.print(",");
+		mapFile.print(lon, 6);
+		mapFile.print(",");
+		mapFile.print((int32_t)heading);
+		mapFile.print(".");
+		mapFile.println((int32_t)distance);
+		mapFile.flush();
 #endif
 
 		break;
@@ -698,33 +700,3 @@ bool IsButtonPressed(int8_t pin) {
 
 	return true;
 }
-//<<<<<<< HEAD
-//}
-
-/*
-	Counts all files in a directory. This doesn't include
-	files inside any of the subdirectories.
-*/
-//uint8_t CountDirFiles(File dir)
-//{
-//	if (!dir)
-//		return 0;
-//
-//	uint8_t count = 1;
-//	while (true)
-//	{
-//		File entry = dir.openNextFile();
-//
-//		if (!entry)
-//			break;
-//
-//		++count;
-//		entry.close();
-//	}
-//
-//	count = count % 100;
-//	return count;
-//}
-//=======
-//}
-//>>>>>>> e22485e95b21365ce0d76071714be86ac0138ce9
