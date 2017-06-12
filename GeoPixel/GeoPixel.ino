@@ -81,7 +81,6 @@ enable all these libraries at the same time.  You must have have
 NEO_ON, GPS_ON and SDC_ON during the actual GeoCache Flag Hunt on
 Finals Day
 */
-//#define NOT_STUPID_BRIGHT 16
 
 #define NEO_ON	1		// NeoPixelShield
 #define TRM_ON	0		// SerialTerminal
@@ -258,9 +257,9 @@ float calcDistance(float flat1, float flon1, float flat2, float flon2)
 		cos(lat1) * cos(lat2) *
 		sin(longing / 2) * sin(longing / 2);
 
-	float c = 2 * atan2(sqrt(a), sqrt(1-a));
+  float c = 2 * atan2(sqrt(a), sqrt(1-a));
 
-	distance = radius * c;
+  distance = radius * c;
 	return(distance);
 }
 
@@ -351,27 +350,27 @@ void setNeoPixel(uint8_t _target, float _heading, float _distance)
 	uint8_t dir = (uint8_t)(_heading / 22.5);
 	for (i = 0; i < 16; ++i) {
 		if (i == dir)
-			strip.setPixelColor(outerLEDs[i], 255 - (curCol), curCol, 0);
+			strip.setPixelColor(outerLEDs[i], 255, 192, 0);
 		else
-			strip.setPixelColor(outerLEDs[i], 64, 192, 128);
+			strip.setPixelColor(outerLEDs[i], 0, 128, 255);
 	}
 	for (i = 0; i < 8; ++i) {
 		if (i == (dir >> 1))
-			strip.setPixelColor(innerLEDs[i], 255 - (curCol), curCol, 0);
+			strip.setPixelColor(innerLEDs[i], 255, 192, 0);
 		else
-			strip.setPixelColor(innerLEDs[i], 64, 192, 128);
+			strip.setPixelColor(innerLEDs[i], 0, 128, 255);
 	}
-	strip.setPixelColor(centerLED, 255 - (curCol), curCol, 0);
+	strip.setPixelColor(centerLED, 255, 192, 0);
 
 	for (i = 39, j = 0; i > 7; i -= 8, ++j) {
 		if (j < _target) {
-			strip.setPixelColor(i, 0, 255, 0);
+			strip.setPixelColor(i, 255, 255, 255);
 		}
 		else if (j == _target) {
-			strip.setPixelColor(i, 255, 255, 0);
+			strip.setPixelColor(i, 255, 192, 0);
 		}
 		else {
-			strip.setPixelColor(i, 255, 0, 0);
+			strip.setPixelColor(i, 0, 128, 255);
 		}
 	}
 
@@ -514,8 +513,6 @@ void setup(void)
 
 	strip.begin();
 	strip.show(); // Initialize all pixels to 'off'
-
-	//strip.setBrightness(NOT_STUPID_BRIGHT);
 #endif	
 
 #if SDC_ON
@@ -525,31 +522,33 @@ void setup(void)
 	sequential number of the file.  The filename can not be more than 8
 	chars in length (excluding the ".txt").
 	*/
-	SD.begin();
-	File root = SD.open("/");
-	int8_t fileCount = -1;
-	while (true)
+	if (SD.begin())
 	{
-		File entry = root.openNextFile();\
-		if (!entry)
+		File root = SD.open("/");
+		int8_t fileCount = -1;
+		while (true)
 		{
+			File entry = root.openNextFile();
+			if (!entry)
+			{
+				entry.close();
+				break;
+			}
+			++fileCount;
 			entry.close();
-			break;
 		}
-		++fileCount;
-		entry.close();
+
+		fileCount = fileCount % 100;
+		char mapFileName[15] = "MyMapNN.txt";
+		if (fileCount < 10)
+			mapFileName[5] = '0';
+		else
+			mapFileName[5] = 48 + (fileCount / 10);
+		mapFileName[6] = 48 + (fileCount % 10);
+		root.close();
+		Serial.println(mapFileName);
+		mapFile = SD.open(mapFileName, FILE_WRITE);
 	}
-
-	fileCount = fileCount % 100;
-	char mapFileName[15] = "MyMapNN.txt";
-	if (fileCount < 10)
-		mapFileName[5] = '0';
-	else
-		mapFileName[5] = 48 + (fileCount / 10);
-	mapFileName[6] = 48 + (fileCount % 10);
-	root.close();
-
-	mapFile = SD.open(mapFileName, FILE_WRITE);
 #endif
 
 #if GPS_ON
@@ -640,21 +639,17 @@ void loop(void)
 		heading = calcBearing(lat, lon, locations[target].lat, locations[target].lon);
 		float relative = fmod((heading - course) + 360, 360);
 		heading = relative;
-		Serial.println(heading);
-		Serial.println(distance);
 
 
 #if SDC_ON
 		// write current position to SecureDigital then flush
-		/*Serial.print(lat);
-		Serial.print(", ");
-		Serial.print(lon);
-		Serial.print(", ");
-		Serial.print(heading);
-		Serial.print(".");
-		Serial.print(distance);
-		Serial.print('/n');*/
-		mapFile.write("We're in babaaooooeeeyyy!");
+		mapFile.print(lat, 6);
+		mapFile.print(",");
+		mapFile.print(lon, 6);
+		mapFile.print(",");
+		mapFile.print((int32_t)heading);
+		mapFile.print(".");
+		mapFile.println((int32_t)distance);
 		mapFile.flush();
 #endif
 
@@ -682,33 +677,3 @@ bool IsButtonPressed(int8_t pin) {
 
 	return true;
 }
-//<<<<<<< HEAD
-//}
-
-/*
-	Counts all files in a directory. This doesn't include
-	files inside any of the subdirectories.
-*/
-//uint8_t CountDirFiles(File dir)
-//{
-//	if (!dir)
-//		return 0;
-//
-//	uint8_t count = 1;
-//	while (true)
-//	{
-//		File entry = dir.openNextFile();
-//
-//		if (!entry)
-//			break;
-//
-//		++count;
-//		entry.close();
-//	}
-//
-//	count = count % 100;
-//	return count;
-//}
-//=======
-//}
-//>>>>>>> e22485e95b21365ce0d76071714be86ac0138ce9
