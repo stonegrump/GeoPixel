@@ -6,10 +6,10 @@ This is skeleton code provided as a project development guideline only.  You
 are not required to follow this coding structure.  You are free to implement
 your project however you wish.
 
-Team Number:
+Team Name:
+Never Get Lost
 
 Team Members:
-
 1.
 2.
 3.
@@ -84,7 +84,7 @@ Finals Day
 #define NOT_STUPID_BRIGHT 16
 
 #define NEO_ON	1		// NeoPixelShield
-#define TRM_ON	0		// SerialTerminal
+#define TRM_ON	1		// SerialTerminal
 #define GPS_ON	0		// Live GPS Message (off = simulated)
 #define SDC_ON 1		// SD Card
 
@@ -174,6 +174,7 @@ ccor = string char pointer containing the GPRMC latitude or longitude DDDMM.MMMM
 Return:
 Decimal degrees coordinate.
 
+Mike is responsible
 **************************************************/
 float degMin2DecDeg(char *cind, char *ccor)
 {
@@ -231,13 +232,28 @@ flat2, flon2 = second latitude and longitude coordinate in decimal degrees
 
 Return:
 distance in feet (3959 earth radius in miles * 5280 feet per mile)
+
+Mike is responsible//yes yes
 **************************************************/
 float calcDistance(float flat1, float flon1, float flat2, float flon2)
 {
 	float distance = 0.0;
+  int radius = 6371;
+  
+	// add code here 
+	float lat1 = flat1 * (3.14 / 180);
+	float lat2 = flat2 * (3.14 / 180);
 
-	// add code here
+	float latting = (lat2 - lat1) * (3.14 / 180);
+	float longing = (flon2 - flon1) * (3.14 / 180);
 
+	float a = sin(latting / 2) * sin(latting / 2) +
+		cos(lat1) * cos(lat2) *
+		sin(longing / 2) * sin(longing / 2);
+
+  float c = 2 * atan2(sqrt(a), sqrt(1-a));
+
+  distance = radius * c;
 	return(distance);
 }
 
@@ -266,12 +282,12 @@ float calcBearing(float flat1, float flon1, float flat2, float flon2)
 	float x, y;
 	y = sin(flonRad2 - flonRad1) * cos(flatRad2);
 	x = cos(flatRad1) * sin(flatRad2) - sin(flatRad1)*cos(flatRad2)*cos(flonRad2 - flonRad1);
-
+	
 	bearing = atan2(y, x);
 	bearing = RAD_TO_DEG*bearing;
 	bearing = fmod(bearing + 360.0f, 360.0f);
 
-	return(bearing);
+	return bearing;
 }
 
 /*************************************************
@@ -305,7 +321,7 @@ void setNeoPixel(uint8_t _target, float _heading, float _distance)
 				strip.setPixelColor(i, 255 - (curCol), (curCol), 0);
 			else
 				strip.setPixelColor(i, 0);
-		}
+}
 		for (int8_t x = 38, y = 0; x > 0; x -= 8, ++y) {
 			if (secondBase / 50 == 5)
 				strip.setPixelColor(x, 255, 255, 255);
