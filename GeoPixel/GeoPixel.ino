@@ -84,7 +84,7 @@ Finals Day
 #define NOT_STUPID_BRIGHT 16
 
 #define NEO_ON	1		// NeoPixelShield
-#define TRM_ON	1		// SerialTerminal
+#define TRM_ON	0		// SerialTerminal
 #define GPS_ON	0		// Live GPS Message (off = simulated)
 #define SDC_ON 1		// SD Card
 
@@ -182,40 +182,37 @@ float degMin2DecDeg(char *cind, char *ccor)
 	//seperate Num from Char*
 	double degreePart, minutePart;
 	//String degreeString, minuteString;
-	char degreeString[2], minuteString[7];
-
-	for (int i = 0; i < 9; i++)
-	{
-		if (i < 2)
+	char degreeString[3], minuteString[7];
+	
+	uint8_t degStrLen = 3;
+	for (uint8_t i = 0; i < 5; ++i) {
+		if (ccor[i] == '.')
 		{
-			degreeString[i] = ccor[i];
-		}
-		else
-		{			
-			minuteString[i - 2] = ccor[i];
+			degStrLen = 2;
 		}
 	}
 
-	//degreePart = atof(degreeString.c_str());
-	//minutePart = atof(minuteString.c_str());
+
+	for (uint8_t i = 0; i < degStrLen + 7; i++)
+	{
+		if (i < degStrLen)
+			degreeString[i] = ccor[i];
+		else
+			minuteString[i - degStrLen] = ccor[i];
+	}
 
 	degreePart = strtod(degreeString, NULL);
 	minutePart = strtod(minuteString, NULL);
+	Serial.println(degreePart);
 
 	//convert
-	degrees = degreePart + minutePart / 60.0;
+	degrees = degreePart + (minutePart / 60.0);
 
 	//negate if S or W
 	if (*cind == 'S' || *cind == 's' || *cind == 'W' || *cind == 'w')
 	{
 		degrees *= -1.0;
 	}
-
-	//Serial.println(degreeString);
-	//Serial.println(minuteString);
-	//Serial.println(String(degreePart, 6).c_str());
-	//Serial.println(String(minutePart, 6).c_str());
-	//Serial.println(String(degrees, 6).c_str());
 
 	return(degrees);
 }
@@ -271,7 +268,7 @@ float calcBearing(float flat1, float flon1, float flat2, float flon2)
 	x = cos(flatRad1) * sin(flatRad2) - sin(flatRad1)*cos(flatRad2)*cos(flonRad2 - flonRad1);
 
 	bearing = atan2(y, x);
-	bearing = DEG_TO_RAD*bearing;
+	bearing = RAD_TO_DEG*bearing;
 	bearing = fmod(bearing + 360.0f, 360.0f);
 
 	return(bearing);
@@ -610,7 +607,7 @@ void loop(void)
 		// parse message parameters
 
 		double course;
-		char buffer[100];
+		char buffer[10];
 		char sChar;
 		uint8_t commaNum = 0;
 		uint16_t modNum;
@@ -639,6 +636,7 @@ void loop(void)
 			sChar = cstr[i];
 			i += 2;
 			lon = degMin2DecDeg(&sChar, buffer);
+			break;
 
 		}
 
@@ -647,6 +645,13 @@ void loop(void)
 
 		// calculated destination distance
 		heading = calcBearing(lat, lon, GEOLAT0, GEOLON0);
+
+		Serial.print("Heading: ");
+		Serial.println(heading);
+		Serial.print("Lat: ");
+		Serial.println(lat);
+		Serial.print("Lon: ");
+		Serial.println(lon);
 
 #if SDC_ON
 		// write current position to SecureDigital then flush
