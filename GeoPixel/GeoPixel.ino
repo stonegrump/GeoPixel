@@ -190,7 +190,7 @@ flat2, flon2 = second latitude and longitude coordinate in decimal degrees
 Return:
 distance in feet (3959 earth radius in miles * 5280 feet per mile)
 
-Mike is responsible//yes
+Mike is responsible//yes yes
 **************************************************/
 float calcDistance(float flat1, float flon1, float flat2, float flon2)
 {
