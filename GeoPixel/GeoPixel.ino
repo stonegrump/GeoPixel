@@ -183,16 +183,7 @@ float degMin2DecDeg(char *cind, char *ccor)
 	//seperate Num from Char*
 	double degreePart, minutePart;
 	//String degreeString, minuteString;
-	char degreeString[3], minuteString[7];
-	
-	uint8_t degStrLen = 3;
-	for (uint8_t i = 0; i < 5; ++i) {
-		if (ccor[i] == '.')
-		{
-			degStrLen = 2;
-		}
 	}
-
 
 	for (uint8_t i = 0; i < degStrLen + 7; i++)
 	{
@@ -204,7 +195,6 @@ float degMin2DecDeg(char *cind, char *ccor)
 
 	degreePart = strtod(degreeString, NULL);
 	minutePart = strtod(minuteString, NULL);
-	Serial.println(degreePart);
 
 	//convert
 	degrees = degreePart + (minutePart / 60.0);
@@ -214,6 +204,7 @@ float degMin2DecDeg(char *cind, char *ccor)
 	{
 		degrees *= -1.0;
 	}
+
 
 	return(degrees);
 }
@@ -515,7 +506,7 @@ void setup(void)
 	*/
 	SD.begin();
 	File root = SD.open("/");
-	int8_t fileCount = -2;
+	int8_t fileCount = -1;
 	while (true)
 	{
 		File entry = root.openNextFile();\
@@ -652,7 +643,6 @@ void loop(void)
 			sChar = cstr[i];
 			i += 2;
 			lon = degMin2DecDeg(&sChar, buffer);
-			break;
 
 		}
 
@@ -662,17 +652,17 @@ void loop(void)
 		// calculated destination distance
 		heading = calcBearing(lat, lon, GEOLAT0, GEOLON0);
 
-		Serial.print("Heading: ");
-		Serial.println(heading);
-		Serial.print("Lat: ");
-		Serial.println(lat);
-		Serial.print("Lon: ");
-		Serial.println(lon);
-
 #if SDC_ON
 		// write current position to SecureDigital then flush
-		mapFile.write(cstr + '\n');
-		mapFile.flush();
+		Serial.print(lat);
+		Serial.print(", ");
+		Serial.print(lon);
+		Serial.print(", ");
+		Serial.print(heading);
+		Serial.print(".");
+		Serial.print(distance);
+		Serial.print('/n');
+		//mapFile.flush();
 #endif
 
 		break;
