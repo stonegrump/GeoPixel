@@ -81,16 +81,12 @@ enable all these libraries at the same time.  You must have have
 NEO_ON, GPS_ON and SDC_ON during the actual GeoCache Flag Hunt on
 Finals Day
 */
-#define NOT_STUPID_BRIGHT 32
+#define NOT_STUPID_BRIGHT 16
 
 #define NEO_ON	1		// NeoPixelShield
 #define TRM_ON	1		// SerialTerminal
-#define GPS_ON	1		// Live GPS Message (off = simulated)
-#define SDC_ON	0
-#define NEO_ON 0		// NeoPixelShield
-#define TRM_ON 1		// SerialTerminal
+#define GPS_ON	0		// Live GPS Message (off = simulated)
 #define SDC_ON 1		// SD Card
-#define GPS_ON 0		// Live GPS Message (off = simulated)
 
 // define pin usage
 #define NEO_TX	6		// NEO transmit
@@ -105,6 +101,7 @@ char cstr[GPS_RX_BUFSIZ];
 uint8_t target = 0;		// target number
 float heading = 0.0;	// target heading
 float distance = 0.0;	// target distance
+bool previousButtonState = false;
 
 #if GPS_ON
 #include <SoftwareSerial.h>
@@ -258,7 +255,7 @@ float calcBearing(float flat1, float flon1, float flat2, float flon2)
 	float x, y;
 	y = sin(flonRad2 - flonRad1) * cos(flatRad2);
 	x = cos(flatRad1) * sin(flatRad2) - sin(flatRad1)*cos(flatRad2)*cos(flonRad2 - flonRad1);
-	
+
 	bearing = atan2(y, x);
 	bearing = DEG_TO_RAD*bearing;
 	bearing = fmod(bearing + 360.0f, 360.0f);
@@ -281,13 +278,15 @@ parameters are in global data space.
 */
 void setNeoPixel(uint8_t _target, float _heading, float _distance)
 {
-	
 
-	float d10 =  (2500 - distance) / 250;
-	
+
+	float d10 = (2500.0 - distance) / 250.0;
+	uint16_t secondBase = (2500 - distance) - ((uint8_t)d10 * 250);
+
 	float curCol = (255.0f / 10.0f) * d10;
 
-	for (uint8_t i = 1, j = 0; i < 40; i += 8, ++j) {
+	int8_t i = 37, j = 0;
+	for (i = 37, j = 0; i > 0; i -= 8, ++j) {
 		if (d10 / 2 == 5)
 			strip.setPixelColor(i, 255, 255, 255);
 		else {
@@ -296,12 +295,56 @@ void setNeoPixel(uint8_t _target, float _heading, float _distance)
 			else
 				strip.setPixelColor(i, 0);
 		}
+		for (int8_t x = 38, y = 0; x > 0; x -= 8, ++y) {
+			if (secondBase / 50 == 5)
+				strip.setPixelColor(x, 255, 255, 255);
+			else {
+				if (y <= (secondBase / 50))
+					strip.setPixelColor(x, 255 - (secondBase), (secondBase), 0);
+				else
+					strip.setPixelColor(x, 0);
+			}
+		}
 	}
+
+	heading += 10;
+	if (heading < 0 || heading > 360)
+		heading = 0;
+
+	uint8_t outerLEDs[16]{ 2,3,4,12,20,28,36,35,34,33,32, 24, 16, 8, 0, 1 };
+	uint8_t innerLEDs[8]{ 10, 11, 19, 27, 26, 25, 17, 9 };
+	uint8_t centerLED = 18;
+	uint8_t dir = (uint8_t)(_heading / 22.5);
+	for (i = 0; i < 16; ++i) {
+		if (i == dir)
+			strip.setPixelColor(outerLEDs[i], 255 - (curCol), curCol, 0);
+		else
+			strip.setPixelColor(outerLEDs[i], 64, 192, 128);
+	}
+	for (i = 0; i < 8; ++i) {
+		if (i == (dir >> 1))
+			strip.setPixelColor(innerLEDs[i], 255 - (curCol), curCol, 0);
+		else
+			strip.setPixelColor(innerLEDs[i], 64, 192, 128);
+	}
+	strip.setPixelColor(centerLED, 255 - (curCol), curCol, 0);
+
+	for (i = 39, j = 0; i > 7; i -= 8, ++j) {
+		if (j < _target) {
+			strip.setPixelColor(i, 0, 255, 0);
+		}
+		else if (j == _target) {
+			strip.setPixelColor(i, 255, 255, 0);
+		}
+		else {
+			strip.setPixelColor(i, 255, 0, 0);
+		}
+	}
+
 	strip.show();
 
-	Serial.print("D10: ");
-	Serial.println(d10);
-	distance -= 100;
+	
+	distance -= 10;
 	if (distance < 0)
 		distance = 2500;
 }
@@ -480,15 +523,28 @@ void setup(void)
 #endif		
 
 	// init target button here
-
+	pinMode(2, INPUT_PULLUP);
 }
 
 void loop(void)
 {
 	// max 1 second blocking call till GPS message received
 	getGPSMessage();
-
+	bool newButtonState = !digitalRead(2);
 	// if button pressed, set new target
+	if (!previousButtonState && newButtonState) {
+		if (target < 4) {
+			strip.setPixelColor(7, 255, 255, 255);
+			strip.show();
+			target++;
+		}
+	}
+	else if (previousButtonState && !newButtonState)
+	{
+		strip.setPixelColor(7, 0);
+		strip.show();
+	}
+	previousButtonState = newButtonState;
 
 	// if GPRMC message (3rd letter = R)
 	while (cstr[3] == 'R')
@@ -515,4 +571,15 @@ void loop(void)
 	// print debug information to Serial Terminal
 	Serial.println(cstr);
 #endif		
+}
 
+bool IsButtonPressed(int8_t pin) {
+	bool val;
+	for (int i = 0; i < 1000; ++i) {
+		val = digitalRead(pin);
+		if (val == HIGH)
+			return false;
+	}
+
+	return true;
+}
