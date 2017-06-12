@@ -250,11 +250,11 @@ float calcDistance(float flat1, float flon1, float flat2, float flon2)
 	float latting = (lat2 - lat1) * (3.14 / 180);
 	float longing = (flon2 - flon1) * (3.14 / 180);
 
-	float a = sin(latting / 2) * Math.sin(latting / 2) +
+	float a = sin(latting / 2) * sin(latting / 2) +
 		cos(lat1) * cos(lat2) *
 		sin(longing / 2) * sin(longing / 2);
 
-  float c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  float c = 2 * atan2(sqrt(a), sqrt(1-a));
 
   distance = radius * c;
 	return(distance);
@@ -518,7 +518,7 @@ void setup(void)
 	*/
 	SD.begin();
 	File root = SD.open("/");
-	int8_t fileCount = -2;
+	int8_t fileCount = -1;
 	while (true)
 	{
 		File entry = root.openNextFile();\
@@ -666,8 +666,15 @@ void loop(void)
 
 #if SDC_ON
 		// write current position to SecureDigital then flush
-		mapFile.write(cstr + '\n');
-		mapFile.flush();
+		Serial.print(lat);
+		Serial.print(", ");
+		Serial.print(lon);
+		Serial.print(", ");
+		Serial.print(heading);
+		Serial.print(".");
+		Serial.print(distance);
+		Serial.print('/n');
+		//mapFile.flush();
 #endif
 
 		break;
