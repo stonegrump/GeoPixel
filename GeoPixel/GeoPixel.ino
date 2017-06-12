@@ -102,10 +102,10 @@ uint8_t target = 0;		// target number
 float heading = 0.0;	// target heading
 float distance = 0.0;	// target distance
 bool previousButtonState = false;
-<<<<<<< HEAD
+
+float lat;
+float lon;
 //File mapFile;			// current file to write the map data
-=======
->>>>>>> e22485e95b21365ce0d76071714be86ac0138ce9
 
 #if GPS_ON
 #include <SoftwareSerial.h>
@@ -181,7 +181,7 @@ float degMin2DecDeg(char *cind, char *ccor)
 
 	//seperate Num from Char*
 	double degreePart, minutePart;
-	String degreeString, minuteString;
+	//String degreeString, minuteString;
 	char degreeString[2], minuteString[7];
 
 	for (int i = 0; i < 9; i++)
@@ -206,7 +206,7 @@ float degMin2DecDeg(char *cind, char *ccor)
 	degrees = degreePart + minutePart / 60.0;
 
 	//negate if S or W
-	if (cind == "S" || cind == "s" || cind == "W" || cind == "w")
+	if (*cind == 'S' || *cind == 's' || *cind == 'W' || *cind == 'w')
 	{
 		degrees *= -1.0;
 	}
@@ -569,11 +569,84 @@ void loop(void)
 	// if GPRMC message (3rd letter = R)
 	while (cstr[3] == 'R')
 	{
+
+		/*Following is the GPS Shield "GPRMC" Message Structure.This message is received
+			once a second.You must parse the message to obtain the parameters required for
+			the GeoCache project.GPS provides coordinates in Degrees Minutes(DDDMM.MMMM).
+			The coordinates in the following GPRMC sample message, after converting to Decimal
+			Degrees format(DDD.DDDDDD) is latitude(23.118757) and longitude(120.274060).By
+			the way, this coordinate is GlobalTop Technology in Taiwan, who designed and
+			manufactured the GPS Chip.
+
+			"$GPRMC,064951.000,A,2307.1256,N,12016.4438,E,0.03,165.48,260406,3.05,W,A*2C/r/n"
+
+			$GPRMC,         // GPRMC Message
+			064951.000,     // utc time hhmmss.sss
+			A,              // status A=data valid or V=data not valid
+			2307.1256,      // Latitude 2307.1256 (degrees minutes format dddmm.mmmm)
+			N,              // N/S Indicator N=north or S=south
+			12016.4438,     // Longitude 12016.4438 (degrees minutes format dddmm.mmmm)
+			E,              // E/W Indicator E=east or W=west
+			0.03,           // Speed over ground knots
+			165.48,         // Course over ground (decimal degrees format ddd.dd)
+			260406,         // date ddmmyy
+			3.05,           // Magnetic variation (decimal degrees format ddd.dd)
+			W,              // E=east or W=west
+			A               // Mode A=Autonomous D=differential E=Estimated
+			* 2C             // checksum
+			/ r / n            // return and newline
+
+			Following are approximate results calculated from above GPS GPRMC message
+			(when GPS_ON == 0) to the GEOLAT0 / GEOLON0 tree location :
+
+		degMin2DecDeg() LAT 2307.1256 N = 23.118757 decimal degrees
+			degMin2DecDeg() LON 12016.4438 E = 120.274060 decimal degrees
+			calcDistance() to GEOLAT0 / GEOLON0 target = 45335760 feet
+			calcBearing() to GEOLAT0 / GEOLON0 target = 22.999655 degrees
+
+			The resulting relative target bearing to the tree is 217.519650 degrees
+
+			******************************************************************************/
 		// parse message parameters
 
+		double course;
+		char buffer[100];
+		char sChar;
+		uint8_t commaNum = 0;
+		uint16_t modNum;
+
+		for (uint16_t i = 0; i < strlen(cstr); ++i) {
+			for (; cstr[i] != ','; ++i);
+			++i;
+			for (; cstr[i] != ','; ++i);
+			++i;
+			for (; cstr[i] != ','; ++i);
+			++i;
+			modNum = i;
+			for (; cstr[i] != ','; ++i) {
+				buffer[(uint8_t)fmod(i, modNum)] = cstr[i];
+			}
+			++i;
+			sChar = cstr[i];
+			i += 2;
+			lat = degMin2DecDeg(&sChar, buffer);
+
+			modNum = i;
+			for (; cstr[i] != ','; ++i) {
+				buffer[(uint8_t)fmod(i, modNum)] = cstr[i];
+			}
+			++i;
+			sChar = cstr[i];
+			i += 2;
+			lon = degMin2DecDeg(&sChar, buffer);
+
+		}
+
 		// calculated destination heading
+		distance = calcDistance(lat, lon, GEOLAT0, GEOLON0);
 
 		// calculated destination distance
+		heading = calcBearing(lat, lon, GEOLAT0, GEOLON0);
 
 #if SDC_ON
 		// write current position to SecureDigital then flush
@@ -605,8 +678,8 @@ bool IsButtonPressed(int8_t pin) {
 
 	return true;
 }
-<<<<<<< HEAD
-}
+//<<<<<<< HEAD
+//}
 
 /*
 	Counts all files in a directory. This doesn't include
@@ -632,6 +705,6 @@ bool IsButtonPressed(int8_t pin) {
 //	count = count % 100;
 //	return count;
 //}
-=======
-}
->>>>>>> e22485e95b21365ce0d76071714be86ac0138ce9
+//=======
+//}
+//>>>>>>> e22485e95b21365ce0d76071714be86ac0138ce9
