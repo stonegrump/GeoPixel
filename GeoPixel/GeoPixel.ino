@@ -102,6 +102,10 @@ uint8_t target = 0;		// target number
 float heading = 0.0;	// target heading
 float distance = 0.0;	// target distance
 bool previousButtonState = false;
+<<<<<<< HEAD
+//File mapFile;			// current file to write the map data
+=======
+>>>>>>> e22485e95b21365ce0d76071714be86ac0138ce9
 
 #if GPS_ON
 #include <SoftwareSerial.h>
@@ -176,23 +180,27 @@ float degMin2DecDeg(char *cind, char *ccor)
 	float degrees = 0.0;
 
 	//seperate Num from Char*
-	float degreePart, minutePart;
+	double degreePart, minutePart;
 	String degreeString, minuteString;
+	char degreeString[2], minuteString[7];
 
 	for (int i = 0; i < 9; i++)
 	{
 		if (i < 2)
 		{
-			degreeString += ccor[i];
+			degreeString[i] = ccor[i];
 		}
 		else
-		{
-			minuteString += ccor[i];
+		{			
+			minuteString[i - 2] = ccor[i];
 		}
 	}
 
-	degreePart = atof(degreeString.c_str());
-	minutePart = atof(minuteString.c_str());
+	//degreePart = atof(degreeString.c_str());
+	//minutePart = atof(minuteString.c_str());
+
+	degreePart = strtod(degreeString, NULL);
+	minutePart = strtod(minuteString, NULL);
 
 	//convert
 	degrees = degreePart + minutePart / 60.0;
@@ -202,6 +210,12 @@ float degMin2DecDeg(char *cind, char *ccor)
 	{
 		degrees *= -1.0;
 	}
+
+	//Serial.println(degreeString);
+	//Serial.println(minuteString);
+	//Serial.println(String(degreePart, 6).c_str());
+	//Serial.println(String(minutePart, 6).c_str());
+	//Serial.println(String(degrees, 6).c_str());
 
 	return(degrees);
 }
@@ -486,29 +500,28 @@ void setup(void)
 	sequential number of the file.  The filename can not be more than 8
 	chars in length (excluding the ".txt").
 	*/
-	SD.begin(115200);
+	SD.begin();
 	File root = SD.open("/");
-	uint8_t fileCount = 1;
+	int8_t fileCount = -2;
 	while (true)
 	{
-		if (!root)
+		File entry = root.openNextFile();\
+		if (!entry)
 		{
-			fileCount = 0;
+			entry.close();
 			break;
 		}
-		File entry = root.openNextFile();
-		if (!entry)
-			break;
 		++fileCount;
 		entry.close();
 	}
 
 	fileCount = fileCount % 100;
-	char* mapFileName = "MyMap";
-	char mapNumber[2];
-	itoa(fileCount, mapNumber, DEC);
-	strcat(mapFileName, mapNumber);
-	strcat(mapFileName, ".txt");
+	char mapFileName[15] = "MyMapNN.txt";
+	if (fileCount < 10)
+		mapFileName[5] = '0';
+	else
+		mapFileName[5] = 48 + (fileCount / 10);
+	mapFileName[6] = 48 + (fileCount % 10);
 	root.close();
 
 	mapFile = SD.open(mapFileName, FILE_WRITE);
@@ -524,6 +537,13 @@ void setup(void)
 
 	// init target button here
 	pinMode(2, INPUT_PULLUP);
+	
+	//Serial.println("Start converting");
+	//char * c1 = "S";
+	////char * c2 = "9999.9999";
+	//char * c2 = "1234.5678";
+	////char * c2 = "0043.5677";
+	//degMin2DecDeg(c1, c2);
 }
 
 void loop(void)
@@ -557,6 +577,8 @@ void loop(void)
 
 #if SDC_ON
 		// write current position to SecureDigital then flush
+		mapFile.write(cstr + '\n');
+		mapFile.flush();
 #endif
 
 		break;
@@ -583,3 +605,33 @@ bool IsButtonPressed(int8_t pin) {
 
 	return true;
 }
+<<<<<<< HEAD
+}
+
+/*
+	Counts all files in a directory. This doesn't include
+	files inside any of the subdirectories.
+*/
+//uint8_t CountDirFiles(File dir)
+//{
+//	if (!dir)
+//		return 0;
+//
+//	uint8_t count = 1;
+//	while (true)
+//	{
+//		File entry = dir.openNextFile();
+//
+//		if (!entry)
+//			break;
+//
+//		++count;
+//		entry.close();
+//	}
+//
+//	count = count % 100;
+//	return count;
+//}
+=======
+}
+>>>>>>> e22485e95b21365ce0d76071714be86ac0138ce9
